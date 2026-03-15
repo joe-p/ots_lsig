@@ -118,10 +118,10 @@ export class OneTimeSinger implements AddressWithTransactionSigner {
 
   async getLsig(keyIndex: number): Promise<LogicSig> {
     if (keyIndex > this.totalKeys) {
-      throw new Error("Key index exceeds total keys");
+      throw new Error("No keys left in key chain");
     }
 
-    let nextLsigAddr: Address = new Address(new Uint8Array(32).fill(255));
+    let nextLsigAddr: Address = new Address(new Uint8Array(32).fill(0));
 
     for (let i = this.totalKeys; i > keyIndex; i--) {
       const cached = this.lsigAddressCache.get(i);

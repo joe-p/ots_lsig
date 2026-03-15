@@ -1,4 +1,4 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { OneTimeSinger, type GetWrappedKey } from "../src";
 import {
   algo,
@@ -131,5 +131,22 @@ describe.concurrent("OTS", async () => {
         amount: microAlgo(1),
       })
       .send();
+  });
+
+  it("should fail when out of keys", async () => {
+    const ots = await generateOts(1);
+    await algorand.send.payment({
+      sender: ots,
+      receiver: ots,
+      amount: microAlgo(1),
+    });
+
+    await expect(
+      algorand.send.payment({
+        sender: ots,
+        receiver: ots,
+        amount: microAlgo(1),
+      }),
+    ).rejects.toThrow("No keys left in key chain");
   });
 });
