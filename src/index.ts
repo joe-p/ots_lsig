@@ -5,10 +5,10 @@ import {
   type Addressable,
 } from "@algorandfoundation/algokit-utils";
 import {
-  generateAddressWithSigners,
   LogicSig,
   LogicSigAccount,
   Transaction,
+  type AddressWithTransactionSigner,
   type TransactionSigner,
 } from "@algorandfoundation/algokit-utils/transact";
 import {
@@ -54,10 +54,40 @@ function rawPubkey(extendedSecretKey: Uint8Array): Uint8Array {
   return publicKey.toBytes();
 }
 
-export class OneTimeSig implements Addressable {
+export class OneTimeSig implements AddressWithTransactionSigner {
   private _lsigTemplate: LsigTemplate;
 
   addr: Address;
+
+  get signer(): TransactionSigner {
+    return async (txns: Transaction[], indexes: number[]) => {
+      const stxns: Uint8Array[] = [];
+
+      for (const index of indexes) {
+        const txn = txns[index];
+
+        if (!txn) {
+          throw new Error(`Transaction index ${index} out of bounds`);
+        }
+
+        const keyIndex = this.nextKeyIndex++;
+        const wrappedEsk = await this.getWrappedKey(keyIndex);
+
+        const edKey = await ed25519SigningKeyFromWrappedSecret(wrappedEsk);
+        const lsig = await this.getLsig(keyIndex);
+        const idSig = await edKey.rawEd25519Signer(
+          new Uint8Array(b32.decode.asBytes(txn.txId())),
+        );
+        const lsigAcct = new LogicSigAccount(lsig.logic, [idSig]);
+
+        const stxn = (await lsigAcct.signer([txn], [0]))[0]!;
+
+        stxns.push(stxn);
+      }
+
+      return stxns;
+    };
+  }
 
   falconPubkey: Uint8Array;
 
@@ -67,18 +97,22 @@ export class OneTimeSig implements Addressable {
 
   lsigAddressCache: Map<number, Address> = new Map();
 
+  nextKeyIndex: number;
+
   private constructor(
     lsigTemplate: LsigTemplate,
     sender: Addressable,
     falconPubkey: Uint8Array,
     getWrappedKey: GetWrappedKey,
     totalKeys: number,
+    nextKeyIndex = 0,
   ) {
     this._lsigTemplate = lsigTemplate;
     this.addr = sender.addr;
     this.falconPubkey = falconPubkey;
     this.getWrappedKey = getWrappedKey;
     this.totalKeys = totalKeys;
+    this.nextKeyIndex = nextKeyIndex;
   }
 
   async getLsig(keyIndex: number): Promise<LogicSig> {
@@ -111,33 +145,6 @@ export class OneTimeSig implements Addressable {
     this.lsigAddressCache.set(keyIndex, lsig.address());
 
     return lsig;
-  }
-
-  async getSigner(keyIndex: number): Promise<TransactionSigner> {
-    const wrappedEsk = await this.getWrappedKey(keyIndex);
-    const edKey = await ed25519SigningKeyFromWrappedSecret(wrappedEsk);
-    const lsig = await this.getLsig(keyIndex);
-
-    return async (txns: Transaction[], indexes: number[]) => {
-      const stxns: Uint8Array[] = [];
-
-      for (const index of indexes) {
-        const txn = txns[index];
-
-        if (!txn) {
-          throw new Error(`Transaction index ${index} out of bounds`);
-        }
-        const idSig = await edKey.rawEd25519Signer(
-          new Uint8Array(b32.decode.asBytes(txn.txId())),
-        );
-        const lsigAcct = new LogicSigAccount(lsig.logic, [idSig]);
-
-        const stxn = (await lsigAcct.signer([txn], [0]))[0]!;
-        stxns.push(stxn);
-      }
-
-      return stxns;
-    };
   }
 
   private lsig(pubkey: Uint8Array, nextLsig: Address): LogicSig {
