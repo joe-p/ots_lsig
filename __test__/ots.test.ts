@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { OneTimeSig, type GetWrappedKey } from "../src";
+import { OneTimeSinger, type GetWrappedKey } from "../src";
 import {
   algo,
   AlgorandClient,
@@ -13,7 +13,7 @@ import {
 } from "@algorandfoundation/xhd-wallet-api";
 import { readFileSync } from "node:fs";
 
-async function generateOts(depth: number): Promise<OneTimeSig> {
+async function generateOts(depth: number): Promise<OneTimeSinger> {
   const algorand = AlgorandClient.defaultLocalNet();
 
   const seed = crypto.getRandomValues(new Uint8Array(32));
@@ -35,7 +35,7 @@ async function generateOts(depth: number): Promise<OneTimeSig> {
 
   const sender = algorand.account.random();
 
-  const ots = await OneTimeSig.fromFile(
+  const ots = await OneTimeSinger.fromFile(
     sender,
     new Uint8Array(32),
     getWrappedKey,

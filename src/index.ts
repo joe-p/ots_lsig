@@ -55,7 +55,7 @@ function rawPubkey(extendedSecretKey: Uint8Array): Uint8Array {
   return publicKey.toBytes();
 }
 
-export class OneTimeSig implements AddressWithTransactionSigner {
+export class OneTimeSinger implements AddressWithTransactionSigner {
   private _lsigTemplate: LsigTemplate;
 
   addr: Address;
@@ -163,7 +163,7 @@ export class OneTimeSig implements AddressWithTransactionSigner {
     falconPubkey: Uint8Array,
     getWrappedKey: GetWrappedKey,
     totalKeys: number,
-  ): Promise<OneTimeSig> {
+  ): Promise<OneTimeSinger> {
     const algorand = AlgorandClient.defaultLocalNet();
     const teal = readFileSync(
       path.join(__dirname, "../contracts/out/OneTimeSig.teal"),
@@ -198,7 +198,7 @@ export class OneTimeSig implements AddressWithTransactionSigner {
       falconPubkeyOffset: findOffset(4),
     };
 
-    return new OneTimeSig(
+    return new OneTimeSinger(
       template,
       sender,
       falconPubkey,
@@ -223,8 +223,8 @@ TransactionComposer.prototype.build = async function () {
       throw new Error("Unknown transaction type, expected sender field");
     }
 
-    if (txn.sender instanceof OneTimeSig) {
-      const ots = txn.sender as OneTimeSig;
+    if (txn.sender instanceof OneTimeSinger) {
+      const ots = txn.sender as OneTimeSinger;
 
       if (!indexes.has(ots.addr)) {
         indexes.set(ots.addr, ots.nextKeyIndex + 1);
