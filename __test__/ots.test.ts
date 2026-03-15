@@ -13,7 +13,7 @@ import {
 } from "@algorandfoundation/xhd-wallet-api";
 import { readFileSync } from "node:fs";
 
-async function generateOts(depth: number): Promise<OneTimeSinger> {
+export async function generateOts(depth: number): Promise<OneTimeSinger> {
   const algorand = AlgorandClient.defaultLocalNet();
 
   const seed = crypto.getRandomValues(new Uint8Array(32));
