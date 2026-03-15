@@ -89,7 +89,7 @@ export async function withErr<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-describe("OTS", async () => {
+describe.concurrent("OTS", async () => {
   const algorand = AlgorandClient.defaultLocalNet();
 
   it("should sign single txn", async () => {
