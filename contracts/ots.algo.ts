@@ -33,6 +33,7 @@ export class OneTimeSig extends LogicSig {
       );
 
       falconVerify(Txn.txId, sig, falconPubkey);
+      return true;
     }
 
     assert(Txn.rekeyTo === NEXT_LSIG);

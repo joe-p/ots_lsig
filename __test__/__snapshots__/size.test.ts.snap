@@ -1,5 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`OTS size > program + arg size 1`] = `233`;
+exports[`OTS size > program + arg size 1`] = `236`;
 
-exports[`OTS size > program size 1`] = `169`;
+exports[`OTS size > program size 1`] = `172`;
