@@ -11,6 +11,7 @@ import {
   harden,
   XHDWalletAPI,
 } from "@algorandfoundation/xhd-wallet-api";
+import { readFileSync } from "node:fs";
 
 async function generateOts(depth: number): Promise<OneTimeSig> {
   const algorand = AlgorandClient.defaultLocalNet();
@@ -58,7 +59,39 @@ async function generateOts(depth: number): Promise<OneTimeSig> {
   return ots;
 }
 describe("OTS", async () => {
+  const algorand = AlgorandClient.defaultLocalNet();
+
   it("should sign single txn", async () => {
     const ots = await generateOts(10);
+    try {
+      await algorand.send.payment({
+        sender: ots,
+        signer: await ots.getSigner(0),
+        receiver: ots,
+        rekeyTo: await ots.getLsig(1),
+        amount: microAlgo(1),
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("pc=")) {
+        const compiled = await algorand.app.compileTealTemplate(
+          readFileSync(
+            __dirname + "/../contracts/out/OneTimeSig.teal",
+            "utf-8",
+          ),
+          {
+            NEXT_LSIG: new Uint8Array(32).fill(1),
+            SENDER: ots.addr.publicKey,
+            PUBKEY: new Uint8Array(32),
+            FALCON_PUBKEY_HASH: new Uint8Array(32),
+          },
+        );
+
+        const pc = err.message.match(/pc=(\d+)/)?.[1]!;
+        const location = compiled.sourceMap.getLocationForPc(Number(pc));
+        throw new Error(
+          `Transaction failed at pc=${pc}, which corresponds to line ${location?.line} in the TEAL code`,
+        );
+      }
+    }
   });
 });

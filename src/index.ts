@@ -4,7 +4,13 @@ import {
   AlgorandClient,
   type Addressable,
 } from "@algorandfoundation/algokit-utils";
-import { LogicSig } from "@algorandfoundation/algokit-utils/transact";
+import {
+  generateAddressWithSigners,
+  LogicSig,
+  LogicSigAccount,
+  Transaction,
+  type TransactionSigner,
+} from "@algorandfoundation/algokit-utils/transact";
 import {
   ed25519SigningKeyFromWrappedSecret,
   type WrappedHdExtendedPrivateKey,
@@ -13,6 +19,7 @@ import path from "node:path";
 import { bytesToNumberLE } from "@noble/curves/utils.js";
 import { mod } from "@noble/curves/abstract/modular.js";
 import { ed25519 } from "@noble/curves/ed25519.js";
+import * as b32 from "hi-base32";
 
 export type TemplateVariables = {
   nextLsig: LogicSig;
@@ -47,10 +54,10 @@ function rawPubkey(extendedSecretKey: Uint8Array): Uint8Array {
   return publicKey.toBytes();
 }
 
-export class OneTimeSig {
+export class OneTimeSig implements Addressable {
   private _lsigTemplate: LsigTemplate;
 
-  sender: Addressable;
+  addr: Address;
 
   falconPubkey: Uint8Array;
 
@@ -68,7 +75,7 @@ export class OneTimeSig {
     totalKeys: number,
   ) {
     this._lsigTemplate = lsigTemplate;
-    this.sender = sender;
+    this.addr = sender.addr;
     this.falconPubkey = falconPubkey;
     this.getWrappedKey = getWrappedKey;
     this.totalKeys = totalKeys;
@@ -81,25 +88,56 @@ export class OneTimeSig {
 
     let nextLsigAddr: Address = new Address(new Uint8Array(32).fill(255));
 
-    for (let i = this.totalKeys - 1; i >= keyIndex; i--) {
+    for (let i = this.totalKeys; i > keyIndex; i--) {
       const cached = this.lsigAddressCache.get(i);
       if (cached) {
         nextLsigAddr = cached;
       } else {
-        const wrappedEsk = await this.getWrappedKey(keyIndex);
+        const wrappedEsk = await this.getWrappedKey(i);
         const esk = await wrappedEsk.unwrapHdExtendedPrivateKey();
         const pubkey = rawPubkey(esk);
         esk.fill(0);
         const lsig = this.lsig(pubkey, nextLsigAddr);
         this.lsigAddressCache.set(i, lsig.address());
-
-        if (i === keyIndex) {
-          return lsig;
-        }
+        nextLsigAddr = lsig.address();
       }
     }
 
-    throw new Error("Failed to generate LogicSig");
+    const wrappedEsk = await this.getWrappedKey(keyIndex);
+    const esk = await wrappedEsk.unwrapHdExtendedPrivateKey();
+    const pubkey = rawPubkey(esk);
+    esk.fill(0);
+    const lsig = this.lsig(pubkey, nextLsigAddr);
+    this.lsigAddressCache.set(keyIndex, lsig.address());
+
+    return lsig;
+  }
+
+  async getSigner(keyIndex: number): Promise<TransactionSigner> {
+    const wrappedEsk = await this.getWrappedKey(keyIndex);
+    const edKey = await ed25519SigningKeyFromWrappedSecret(wrappedEsk);
+    const lsig = await this.getLsig(keyIndex);
+
+    return async (txns: Transaction[], indexes: number[]) => {
+      const stxns: Uint8Array[] = [];
+
+      for (const index of indexes) {
+        const txn = txns[index];
+
+        if (!txn) {
+          throw new Error(`Transaction index ${index} out of bounds`);
+        }
+        const idSig = await edKey.rawEd25519Signer(
+          new Uint8Array(b32.decode.asBytes(txn.txId())),
+        );
+        const lsigAcct = new LogicSigAccount(lsig.logic, [idSig]);
+
+        const stxn = (await lsigAcct.signer([txn], [0]))[0]!;
+        stxns.push(stxn);
+      }
+
+      return stxns;
+    };
   }
 
   private lsig(pubkey: Uint8Array, nextLsig: Address): LogicSig {
@@ -107,7 +145,7 @@ export class OneTimeSig {
     program.set(pubkey, this._lsigTemplate.pubkeyOffset);
     program.set(this.falconPubkey, this._lsigTemplate.falconPubkeyOffset);
     program.set(nextLsig.publicKey, this._lsigTemplate.nextLsigOffset);
-    program.set(this.sender.addr.publicKey, this._lsigTemplate.senderOffset);
+    program.set(this.addr.publicKey, this._lsigTemplate.senderOffset);
 
     return new LogicSig(program);
   }
