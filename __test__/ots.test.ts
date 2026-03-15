@@ -115,4 +115,21 @@ describe("OTS", async () => {
       amount: microAlgo(1),
     });
   });
+
+  it("should sign grouped txns", async () => {
+    const ots = await generateOts(10);
+    await algorand
+      .newGroup()
+      .addPayment({
+        sender: ots,
+        receiver: ots,
+        amount: microAlgo(1),
+      })
+      .addPayment({
+        sender: ots,
+        receiver: ots,
+        amount: microAlgo(1),
+      })
+      .send();
+  });
 });
