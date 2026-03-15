@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import {
   Address,
   AlgorandClient,
+  TransactionComposer,
   type Addressable,
 } from "@algorandfoundation/algokit-utils";
 import {
@@ -206,3 +207,36 @@ export class OneTimeSig implements AddressWithTransactionSigner {
     );
   }
 }
+
+const originalBuild = TransactionComposer.prototype.build;
+TransactionComposer.prototype.build = async function () {
+  // @ts-expect-error Accessing private field for transaction composer
+  const { txns } = this;
+
+  const indexes = new Map<Address, number>();
+  for (const composerTxn of txns) {
+    const txn = (composerTxn as any).data as {
+      sender?: Addressable;
+      rekeyTo?: Addressable;
+    };
+    if (!("sender" in txn)) {
+      throw new Error("Unknown transaction type, expected sender field");
+    }
+
+    if (txn.sender instanceof OneTimeSig) {
+      const ots = txn.sender as OneTimeSig;
+
+      if (!indexes.has(ots.addr)) {
+        indexes.set(ots.addr, ots.nextKeyIndex + 1);
+      }
+
+      console.debug(
+        `Injecting rekey for transaction with OTS sender ${ots.addr} (key index ${indexes.get(ots.addr)!})`,
+      );
+      txn.rekeyTo = await ots.getLsig(indexes.get(ots.addr)!);
+      indexes.set(ots.addr, indexes.get(ots.addr)! + 1);
+    }
+  }
+
+  return await originalBuild.call(this);
+};

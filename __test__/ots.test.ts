@@ -97,7 +97,6 @@ describe("OTS", async () => {
     await algorand.send.payment({
       sender: ots,
       receiver: ots,
-      rekeyTo: await ots.getLsig(1),
       amount: microAlgo(1),
     });
   });
@@ -107,14 +106,12 @@ describe("OTS", async () => {
     await algorand.send.payment({
       sender: ots,
       receiver: ots,
-      rekeyTo: await ots.getLsig(1),
       amount: microAlgo(1),
     });
 
     await algorand.send.payment({
       sender: ots,
       receiver: ots,
-      rekeyTo: await ots.getLsig(2),
       amount: microAlgo(1),
     });
   });
