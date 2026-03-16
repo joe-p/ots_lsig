@@ -2,6 +2,10 @@
 
 This repo contains a reference implementation for a one-time signature (OTS) scheme via Algorand's Logic Signatures. The main goal is to prevent "harvest now, forge later" attacks from a quantum adversary. This scheme intends to be a middle-ground between classical signature schemes and PQ-secure schemes such as hash-based or lattice-based signatures, which are often significantly larger in size and harder to verify. Since this scheme uses Ed25519 signatures, it is also compatible with most existing key management systems.
 
+## Status
+
+This repository is a work-in-progress and should not be used in production.
+
 ## Comparison
 
 | Scheme          | Public Key Size | Signature Size | Transactions Required |
@@ -75,6 +79,14 @@ Since the usage of the logic signature always requires the `rekeyTo` field to be
 #### Patches
 
 For dApps that use the latest v10 of AlgoKit this reference implementation includes a monkey-patched `TransactionComposer.build` method that automatically sets the `rekeyTo` field for transactions that are signed with an OTS chain.
+
+### Discovery
+
+This scheme is stateful because the signer must know which key was last used to sign a confirmed transaction. If an OTS chain is recovered on a new device there must be a discovery process to determine which key to use for the next signature. This process requires the most recent transction sent from the `sender` to be found and parsed to get the included public key. If the tranasction is older than 1000 rounds, an archival node or indexer must be used to find the transaction.
+
+### Transaction Failures
+
+Because failed transactions on Algorand are not included in a block, the rekeys for failed transactions will not take affect. This means a client may sign a transaction with the next key index and incorrectly assume the chain is in a state that has not be confirmed. This means clients will need to be able to handle transaction failures and roll-back to the previous key if needed.
 
 ## Future Work
 
