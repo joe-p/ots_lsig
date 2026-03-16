@@ -1,4 +1,4 @@
-# One-Time Signature LogicSig
+# One-Time Logic Signatures
 
 This repo contains a reference implementation for a one-time signature (OTS) scheme via Algorand's Logic Signatures. The main goal is to prevent "harvest now, forge later" attacks from a quantum adversary. This scheme intends to be a middle-ground between classical signature schemes and PQ-secure schemes such as hash-based or lattice-based signatures, which are often significantly larger in size and harder to verify. Since this scheme uses Ed25519 signatures, it is also compatible with most existing key management systems.
 
