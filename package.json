@@ -9,7 +9,7 @@
     "bt": "pnpm compile && pnpm test"
   },
   "devDependencies": {
-    "@algorandfoundation/algokit-utils": "v10.0.0-alpha.44",
+    "@algorandfoundation/algokit-utils": "10.0.0-alpha.45",
     "@algorandfoundation/algorand-typescript": "^1.1.0",
     "@algorandfoundation/puya-ts": "^1.1.0",
     "@algorandfoundation/xhd-wallet-api": "v2.0.0-canary.1",
@@ -26,4 +26,3 @@
     "hi-base32": "^0.5.1"
   }
 }
-
