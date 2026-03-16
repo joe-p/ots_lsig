@@ -37,6 +37,22 @@ export type LsigTemplate = {
   senderOffset: number;
 };
 
+export type OtsParameters = {
+  /** The Algorand address that this OTS chain has signing authority for. */
+  sender: Addressable;
+  /**
+   * The FALCON-1024-DET public key that can be used as an escape hatch from the scheme.
+   * This key will always be able to sign transactions for `sender`, regardless of the current state of the OTS key rotation
+   */
+  falconPubkey: Uint8Array;
+  /**
+   * The total number of keys in the OTS chain.
+   * This determines how many times the OTS can be used to sign transactions before the chain is exhausted and can no longer be used.
+   * Once exhausted, the `falconPubkey` can still be used to sign transactions for `sender`, potentially rotating to a new OTS chain if desired.
+   */
+  totalKeys: number;
+};
+
 export type GetWrappedKey = (
   keyIndex: number,
 ) => Promise<WrappedHdExtendedPrivateKey>;
