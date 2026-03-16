@@ -88,9 +88,16 @@ This scheme is stateful because the signer must know which key was last used to 
 
 Because failed transactions on Algorand are not included in a block, the rekeys for failed transactions will not take affect. This means a client may sign a transaction with the next key index and incorrectly assume the chain is in a state that has not be confirmed. This means clients will need to be able to handle transaction failures and roll-back to the previous key if needed.
 
+## Alternative Designs
+
+### App-Based Merkle Tree
+
+An alternative design for an OTS scheme on Algorand would be an application that stores a merkle tree root of ed25519 keys that is called upon each signature to ensure a key is only used once. This would solve the problem of having to rollback client-side state each time a transaction failed since keys would not need to be used in a specific order. The main problem with this design is that it would require an injection of app call into a transaction group with a corresponding logic signature pointing to that app call. This would problematic for atomic groups with multiple signers that want to use the same sceheme because there would be a race condition for group indicies.
+
 ## Future Work
 
 - Rust library for creating and verifying OTS chains in embedded devices such as hardware wallets
   - Ledger app
 - Enshrining the "extension" pattern in AlgoKit for easier dApp and wallet compatibility
 - Developer patches for other popular Algorand libraries, such as `algosdk` and older versions of AlgoKit utils
+- Explore feasibility of a protocol change that would allow using stateful apps as "signatures" for transactions to enable stateful merkle trees
