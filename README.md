@@ -48,19 +48,19 @@ Ed25519 itself is not PQ-secure, but the hash function used for deriving Lsig ad
 
 ### Active Quantum Adversary
 
-If there is an active quantum adversary watching the mempool, they could potentially use Shor's algorithim to derive the secret key, create a new transasction, and front-run your original transaction. This is a fairly complex attack and not only requires a quantum computer with enough error-correcting qubits to run Shor's algorithim but also have gates fast enough to run the algorithim before the original transaction is finalized. That being said, it is impossible to know how practical such an attack could be in the future thus this scheme should NOT be considered PQ-secure with active adversaries.
+If there is an active quantum adversary watching the mempool, they could potentially use Shor's algorithm to derive the secret key, create a new transaction, and front-run your original transaction. This is a fairly complex attack and not only requires a quantum computer with enough error-correcting qubits to run Shor's algorithm but also have gates fast enough to run the algorithm before the original transaction is finalized. That being said, it is impossible to know how practical such an attack could be in the future thus this scheme should NOT be considered PQ-secure with active adversaries.
 
 #### FALCON Escape Hatch
 
-At any point the FALCON-1024-DET key can be used to sign transactions for the `sender` address and effectively bypass the OTS scheme. This is particularly useful if the user gives a high credence to the existance of active quantum adversaries in the mempool and wants to transition their account to a fully PQ-secure scheme.
+At any point the FALCON-1024-DET key can be used to sign transactions for the `sender` address and effectively bypass the OTS scheme. This is particularly useful if the user gives a high credence to the existence of active quantum adversaries in the mempool and wants to transition their account to a fully PQ-secure scheme.
 
 #### Reduced Blast Radius
 
-When a key in the chain is compromised, it is only that key that is compromised. Since the LogicSig is strict about the next address to rekey to, the adversary cannot use the compromised key to sign transactions that would rekey to a key they own. This means the adversary can use the compromised key for only one transactions, but then it must rekey back to the next that the honest user owns. If the user is dilligent about verifying transaction confirmations, they can immediately detect if a key is compromised and stop using the chain before any more keys are compromised. This is where the FALCON escape hatch can be useful to immediately transition to a new OTS chain if there is any suspicion of compromise.
+When a key in the chain is compromised, it is only that key that is compromised. Since the LogicSig is strict about the next address to rekey to, the adversary cannot use the compromised key to sign transactions that would rekey to a key they own. This means the adversary can use the compromised key for only one transactions, but then it must rekey back to the next that the honest user owns. If the user is diligent about verifying transaction confirmations, they can immediately detect if a key is compromised and stop using the chain before any more keys are compromised. This is where the FALCON escape hatch can be useful to immediately transition to a new OTS chain if there is any suspicion of compromise.
 
 ### Trust Model
 
-With a regular signature scheme it is trivial to verify that the secret key you own matches with the corresponding public key. With this OTS scheme, however, there are potentially thousands or millions of keys involved in generating the logic signatures. A malicious library could inject their own key in the chain without verification. The integrity of a OTS chain can be verified solely with public information (all the public keys in the chain). For this reason it is recommended to always verify the integrity of an OTS chain before using it. Using a seperate offline device to verify the integrity of the chain can further increase security by preventing potential supply chain attacks.
+With a regular signature scheme it is trivial to verify that the secret key you own matches with the corresponding public key. With this OTS scheme, however, there are potentially thousands or millions of keys involved in generating the logic signatures. A malicious library could inject their own key in the chain without verification. The integrity of a OTS chain can be verified solely with public information (all the public keys in the chain). For this reason it is recommended to always verify the integrity of an OTS chain before using it. Using a separate offline device to verify the integrity of the chain can further increase security by preventing potential supply chain attacks.
 
 ## Limitations
 
@@ -82,17 +82,17 @@ For dApps that use the latest v10 of AlgoKit this reference implementation inclu
 
 ### Discovery
 
-This scheme is stateful because the signer must know which key was last used to sign a confirmed transaction. If an OTS chain is recovered on a new device there must be a discovery process to determine which key to use for the next signature. This process requires the most recent transction sent from the `sender` to be found and parsed to get the included public key. If the tranasction is older than 1000 rounds, an archival node or indexer must be used to find the transaction.
+This scheme is stateful because the signer must know which key was last used to sign a confirmed transaction. If an OTS chain is recovered on a new device there must be a discovery process to determine which key to use for the next signature. This process requires the most recent transaction sent from the `sender` to be found and parsed to get the included public key. If the transaction is older than 1000 rounds, an archival node or indexer must be used to find the transaction.
 
 ### Transaction Failures
 
-Because failed transactions on Algorand are not included in a block, the rekeys for failed transactions will not take affect. This means a client may sign a transaction with the next key index and incorrectly assume the chain is in a state that has not be confirmed. This means clients will need to be able to handle transaction failures and roll-back to the previous key if needed.
+Because failed transactions on Algorand are not included in a block, the rekeys for failed transactions will not take effect. This means a client may sign a transaction with the next key index and incorrectly assume the chain is in a state that has not be confirmed. This means clients will need to be able to handle transaction failures and roll-back to the previous key if needed.
 
 ## Alternative Designs
 
 ### App-Based Merkle Tree
 
-An alternative design for an OTS scheme on Algorand would be an application that stores a merkle tree root of ed25519 keys that is called upon each signature to ensure a key is only used once. This would solve the problem of having to rollback client-side state each time a transaction failed since keys would not need to be used in a specific order. The main problem with this design is that it would require an injection of app call into a transaction group with a corresponding logic signature pointing to that app call. This would problematic for atomic groups with multiple signers that want to use the same sceheme because there would be a race condition for group indicies.
+An alternative design for an OTS scheme on Algorand would be an application that stores a merkle tree root of ed25519 keys that is called upon each signature to ensure a key is only used once. This would solve the problem of having to rollback client-side state each time a transaction failed since keys would not need to be used in a specific order. The main problem with this design is that it would require an injection of app call into a transaction group with a corresponding logic signature pointing to that app call. This would be problematic for atomic groups with multiple signers that want to use the same scheme because there would be a race condition for group indices.
 
 ## Future Work
 
