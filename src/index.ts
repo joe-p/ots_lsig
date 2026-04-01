@@ -132,6 +132,19 @@ export class OneTimeSinger implements AddressWithTransactionSigner {
     this.nextKeyIndex = nextKeyIndex;
   }
 
+  private async createAndCacheLsig(
+    keyIndex: number,
+    nextLsigAddr: Address,
+  ): Promise<LogicSig> {
+    const wrappedEsk = await this.getWrappedKey(keyIndex);
+    const esk = await wrappedEsk.unwrapHdExtendedPrivateKey();
+    const pubkey = rawPubkey(esk);
+    esk.fill(0);
+    const lsig = this.lsig(pubkey, nextLsigAddr);
+    this.lsigAddressCache.set(keyIndex, lsig.address());
+    return lsig;
+  }
+
   async getLsig(keyIndex: number): Promise<LogicSig> {
     if (keyIndex > this.totalKeys) {
       throw new Error("No keys left in key chain");
@@ -144,24 +157,12 @@ export class OneTimeSinger implements AddressWithTransactionSigner {
       if (cached) {
         nextLsigAddr = cached;
       } else {
-        const wrappedEsk = await this.getWrappedKey(i);
-        const esk = await wrappedEsk.unwrapHdExtendedPrivateKey();
-        const pubkey = rawPubkey(esk);
-        esk.fill(0);
-        const lsig = this.lsig(pubkey, nextLsigAddr);
-        this.lsigAddressCache.set(i, lsig.address());
+        const lsig = await this.createAndCacheLsig(i, nextLsigAddr);
         nextLsigAddr = lsig.address();
       }
     }
 
-    const wrappedEsk = await this.getWrappedKey(keyIndex);
-    const esk = await wrappedEsk.unwrapHdExtendedPrivateKey();
-    const pubkey = rawPubkey(esk);
-    esk.fill(0);
-    const lsig = this.lsig(pubkey, nextLsigAddr);
-    this.lsigAddressCache.set(keyIndex, lsig.address());
-
-    return lsig;
+    return await this.createAndCacheLsig(keyIndex, nextLsigAddr);
   }
 
   private lsig(pubkey: Uint8Array, nextLsig: Address): LogicSig {
