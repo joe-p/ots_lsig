@@ -165,14 +165,37 @@ export class OneTimeSinger implements AddressWithTransactionSigner {
     return await this.createAndCacheLsig(keyIndex, nextLsigAddr);
   }
 
-  private lsig(pubkey: Uint8Array, nextLsig: Address): LogicSig {
+  private lsig(
+    pubkey: Uint8Array,
+    nextLsig: Address,
+    pqSalt: number = 0,
+  ): LogicSig {
     const program = new Uint8Array(this._lsigTemplate.program);
     program.set(pubkey, this._lsigTemplate.pubkeyOffset);
     program.set(this.falconPubkey, this._lsigTemplate.falconPubkeyOffset);
     program.set(nextLsig.publicKey, this._lsigTemplate.nextLsigOffset);
     program.set(this.addr.publicKey, this._lsigTemplate.senderOffset);
+    program.set([pqSalt], program.length - 1);
 
-    return new LogicSig(program);
+    const isEd25519 = (lsig: LogicSig) => {
+      try {
+        ed25519.Point.fromBytes(lsig.address().publicKey);
+        return true;
+      } catch (e) {
+        if (e instanceof Error && e.message.includes("bad point")) {
+          return false;
+        }
+
+        throw e;
+      }
+    };
+
+    const lsig = new LogicSig(program);
+    if (isEd25519(lsig)) {
+      return this.lsig(pubkey, nextLsig, pqSalt + 1);
+    }
+
+    return lsig;
   }
 
   static async fromFile(
@@ -182,10 +205,12 @@ export class OneTimeSinger implements AddressWithTransactionSigner {
     totalKeys: number,
   ): Promise<OneTimeSinger> {
     const algorand = AlgorandClient.defaultLocalNet();
-    const teal = readFileSync(
-      path.join(__dirname, "../contracts/out/OneTimeSig.teal"),
-      "utf-8",
-    );
+    const teal =
+      readFileSync(
+        path.join(__dirname, "../contracts/out/OneTimeSig.teal"),
+        "utf-8",
+      ) + "\npushint 0";
+
     const compiled = (
       await algorand.app.compileTealTemplate(teal, {
         NEXT_LSIG: new Uint8Array(32).fill(1),
@@ -194,6 +219,8 @@ export class OneTimeSinger implements AddressWithTransactionSigner {
         FALCON_PUBKEY_HASH: new Uint8Array(32).fill(4),
       })
     ).compiledBase64ToBytes;
+
+    console.debug(Buffer.from(compiled).toString("hex"));
 
     const findOffset = (placeholder: number): number => {
       for (let i = 0; i < compiled.length - 32; i++) {
