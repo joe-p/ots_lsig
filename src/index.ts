@@ -179,7 +179,7 @@ export class OneTimeSinger implements AddressWithTransactionSigner {
 
     const isEd25519 = (lsig: LogicSig) => {
       try {
-        ed25519.Point.fromBytes(lsig.address().publicKey);
+        ed25519.Point.fromBytes(lsig.address().publicKey, true);
         return true;
       } catch (e) {
         if (e instanceof Error && e.message.includes("bad point")) {
