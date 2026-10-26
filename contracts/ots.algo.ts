@@ -32,7 +32,10 @@ export class OneTimeSig extends LogicSig {
         "invalid falcon key",
       );
 
-      falconVerify(Txn.txId, sig, falconPubkey);
+      assert(
+        falconVerify(Txn.txId, sig, falconPubkey),
+        "falcon signature verification failed",
+      );
       return true;
     }
 
